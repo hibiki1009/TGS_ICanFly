@@ -154,14 +154,12 @@ bool VRMConverter::ConvertRig(UVrmAssetListObject *vrmAssetList) {
 		}
 	}
 
+	auto* k = VRMGetSkeleton(vrmAssetList->SkeletalMesh);
 
 #if	UE_VERSION_OLDER_THAN(4,20,0)
 #elif UE_VERSION_OLDER_THAN(5,4,0)
 
-
 #if WITH_EDITOR
-	auto* k = VRMGetSkeleton(vrmAssetList->SkeletalMesh);
-
 	UNodeMappingContainer* mc = nullptr;
 
 #if	UE_VERSION_OLDER_THAN(5,0,0)
@@ -179,7 +177,6 @@ bool VRMConverter::ConvertRig(UVrmAssetListObject *vrmAssetList) {
 	mc->AddDefaultMapping();
 #endif
 
-	FString PelvisBoneName;
 	{
 		const VRM::VRMMetadata *meta = reinterpret_cast<VRM::VRMMetadata*>(aiData->mVRMMeta);
 
@@ -216,11 +213,6 @@ bool VRMConverter::ConvertRig(UVrmAssetListObject *vrmAssetList) {
 					break;
 				}
 
-				if (PelvisBoneName.Len() == 0) {
-					if (ue4.Compare(TEXT("Pelvis"), ESearchCase::IgnoreCase) == 0) {
-						PelvisBoneName = target;
-					}
-				}
 				func(ue4, target);
 			}
 			{
@@ -626,7 +618,43 @@ bool VRMConverter::ConvertRig(UVrmAssetListObject *vrmAssetList) {
 		}// map end
 	}
 
-	{
+	//mc->AddMapping
+	if (mc) {
+		mc->PostEditChange();
+		vrmAssetList->HumanoidRig = mc;
+	}
+#endif // editor
+#endif //420
+
+	if (VRMConverter::Options::Get().IsVRMAModel()) {
+		// for expression curve
+		for (int i = 0; i < k->GetReferenceSkeleton().GetRawBoneNum(); ++i) {
+			k->SetBoneTranslationRetargetingMode(i, EBoneTranslationRetargetingMode::Animation);
+		}
+
+		if (vrmAssetList && vrmAssetList->VrmMetaObject) {
+			for (auto& t : vrmAssetList->VrmMetaObject->humanoidBoneTable) {
+				auto i = k->GetReferenceSkeleton().FindBoneIndex(*t.Value);
+				if (i != INDEX_NONE) {
+					if (t.Key.Compare(TEXT("hips"), ESearchCase::IgnoreCase) == 0) {
+					} else {
+						k->SetBoneTranslationRetargetingMode(i, EBoneTranslationRetargetingMode::Skeleton);
+					}
+				}
+			}
+		}
+	}else{
+
+		FString PelvisBoneName;
+		if (vrmAssetList && vrmAssetList->VrmMetaObject) {
+			for (auto& t : vrmAssetList->VrmMetaObject->humanoidBoneTable) {
+				if (t.Key.Compare(TEXT("hips"), ESearchCase::IgnoreCase) == 0) {
+					PelvisBoneName = t.Value;
+					break;
+				}
+			}
+		}
+
 		int bone = -1;
 		for (int i = 0; i < k->GetReferenceSkeleton().GetRawBoneNum(); ++i) {
 			//const int32 BoneIndex = k->GetReferenceSkeleton().FindBoneIndex(InBoneName);
@@ -638,10 +666,11 @@ bool VRMConverter::ConvertRig(UVrmAssetListObject *vrmAssetList) {
 		}
 
 		bool first = true;
-		while(bone >= 0){
+		while (bone >= 0) {
 			if (first) {
 				k->SetBoneTranslationRetargetingMode(bone, EBoneTranslationRetargetingMode::AnimationScaled);
-			} else {
+			}
+			else {
 				k->SetBoneTranslationRetargetingMode(bone, EBoneTranslationRetargetingMode::Animation);
 			}
 			first = false;
@@ -659,7 +688,7 @@ bool VRMConverter::ConvertRig(UVrmAssetListObject *vrmAssetList) {
 				TEXT("ik_hand_r"),
 			};
 
-			for (auto &s : n) {
+			for (auto& s : n) {
 				int32 ind = k->GetReferenceSkeleton().FindBoneIndex(s);
 				if (ind < 0) continue;
 
@@ -679,13 +708,6 @@ bool VRMConverter::ConvertRig(UVrmAssetListObject *vrmAssetList) {
 		}
 
 	}
-	//mc->AddMapping
-	if (mc) {
-		mc->PostEditChange();
-		vrmAssetList->HumanoidRig = mc;
-	}
-#endif // editor
-#endif //420
 
 	// dummy Collision
 	if (vrmAssetList) {

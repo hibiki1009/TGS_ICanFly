@@ -37,6 +37,7 @@ SOFTWARE.
 #include "DrawDebugHelpers.h"
 
 #include "VrmMetaObject.h"
+#include "VrmAssetListObject.h"
 #include "VrmUtil.h"
 
 #include "VrmSpringBone.h"
@@ -70,17 +71,27 @@ void FAnimNode_VrmSpringBone::Initialize_AnyThread(const FAnimationInitializeCon
 
 	Super::Initialize_AnyThread(Context);
 
+	VrmMetaObject_Internal = VrmMetaObject;
+	if (VrmMetaObject_Internal == nullptr && EnableAutoSearchMetaData) {
+		VrmAssetListObject_Internal = VRMUtil::GetAssetListObject(VRMGetSkinnedAsset(Context.AnimInstanceProxy->GetSkelMeshComponent()));
+		if (VrmAssetListObject_Internal) {
+			VrmMetaObject_Internal = VrmAssetListObject_Internal->VrmMetaObject;
+		}
+	}
+
 	if (SpringManager.Get()) {
 		SpringManager.Get()->reset();
 	}
 	else {
-		if (VrmMetaObject) {
-			if (VrmMetaObject->GetVRMVersion() >= 1) {
+		if (VrmMetaObject_Internal) {
+			if (VrmMetaObject_Internal->GetVRMVersion() >= 1) {
 				SpringManager = MakeShareable(new VRM1Spring::VRM1SpringManager());
 			}
 		}
 		if (SpringManager.IsValid() == false) {
 			SpringManager = MakeShareable(new VRMSpringBone::VRMSpringManager());
+		}
+		if (SpringManager.Get()) {
 		}
 	}
 }
@@ -98,8 +109,8 @@ void FAnimNode_VrmSpringBone::Initialize_AnyThread_local(const FAnimationInitial
 		SpringManager.Get()->reset();
 	}
 	else {
-		if (VrmMetaObject) {
-			if (VrmMetaObject->GetVRMVersion() >= 1) {
+		if (VrmMetaObject_Internal) {
+			if (VrmMetaObject_Internal->GetVRMVersion() >= 1) {
 				SpringManager = MakeShareable(new VRM1Spring::VRM1SpringManager());
 			}
 		}
@@ -186,10 +197,10 @@ void FAnimNode_VrmSpringBone::EvaluateSkeletalControl_AnyThread(FComponentSpaceP
 	auto BoneSpace = EBoneControlSpace::BCS_WorldSpace;
 	{
 
-		if (VrmMetaObject == nullptr) {
+		if (VrmMetaObject_Internal == nullptr) {
 			return;
 		}
-		if (VRMGetSkeleton(VrmMetaObject->SkeletalMesh) != Output.AnimInstanceProxy->GetSkeleton()) {
+		if (VRMGetSkeleton(VrmMetaObject_Internal->SkeletalMesh) != Output.AnimInstanceProxy->GetSkeleton()) {
 			//skip for renamed bone
 			//return;
 		}
@@ -204,72 +215,13 @@ void FAnimNode_VrmSpringBone::EvaluateSkeletalControl_AnyThread(FComponentSpaceP
 				return;
 			}
 			if (SpringManager->bInit == false) {
-				SpringManager->init(VrmMetaObject, Output);
+				SpringManager->init(VrmMetaObject_Internal.Get(), Output);
 				return;
 			}
 
 			SpringManager->update(this, CurrentDeltaTime, Output, OutBoneTransforms);
 
 			SpringManager->applyToComponent(Output, OutBoneTransforms);
-
-/*
-			for (auto &springRoot : SpringManager->spring) {
-				for (auto &sChain : springRoot.SpringDataChain) {
-					int BoneChain = 0;
-
-					FTransform CurrentTransForm = FTransform::Identity;
-					for (auto &sData : sChain) {
-
-
-						//FCompactPoseBoneIndex uu = Output.Pose.GetPose().GetBoneContainer().GetCompactPoseIndexFromSkeletonIndex(sData.boneIndex);
-						FCompactPoseBoneIndex uu(sData.boneIndex);
-
-						if (Output.Pose.GetPose().IsValidIndex(uu) == false) {
-							continue;
-						}
-
-						FTransform NewBoneTM;
-
-						if (BoneChain == 0) {
-							NewBoneTM = Output.Pose.GetComponentSpaceTransform(uu);
-							NewBoneTM.SetRotation(sData.m_resultQuat);
-
-							CurrentTransForm = NewBoneTM;
-						}else{
-
-							NewBoneTM = CurrentTransForm;
-							
-							auto c = RefSkeletonTransform[sData.boneIndex];
-							NewBoneTM = c * NewBoneTM;
-							NewBoneTM.SetRotation(sData.m_resultQuat);
-
-
-							//const FTransform ComponentTransform = Output.AnimInstanceProxy->GetComponentTransform();
-							//NewBoneTM.SetLocation(ComponentTransform.TransformPosition(sData.m_currentTail));
-
-							CurrentTransForm = NewBoneTM;
-						}
-
-						FBoneTransform a(uu, NewBoneTM);
-
-						bool bFirst = true;
-						for (auto &t : OutBoneTransforms) {
-							if (t.BoneIndex == a.BoneIndex) {
-								bFirst = false;
-								break;
-							}
-						}
-
-						if (bFirst) {
-							OutBoneTransforms.Add(a);
-						}
-						BoneChain++;
-					}
-				}
-
-			}
-			OutBoneTransforms.Sort(FCompareBoneTransformIndex());
-			*/
 
 		}
 	}
@@ -291,7 +243,17 @@ void FAnimNode_VrmSpringBone::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 {
 #if WITH_EDITOR
 
-	if (VrmMetaObject == nullptr || PreviewSkelMeshComp == nullptr) {
+	auto MetaObjectLocal = VrmMetaObject_Internal;
+
+	if (MetaObjectLocal == nullptr && EnableAutoSearchMetaData) {
+		auto *p = VRMUtil::GetAssetListObject(VRMGetSkinnedAsset(PreviewSkelMeshComp));
+		if (p) {
+			MetaObjectLocal = p->VrmMetaObject;
+		}
+	}
+
+
+	if (MetaObjectLocal == nullptr || PreviewSkelMeshComp == nullptr) {
 		return;
 	}
 	if (PreviewSkelMeshComp->GetWorld() == nullptr) {
@@ -301,12 +263,103 @@ void FAnimNode_VrmSpringBone::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 	ESceneDepthPriorityGroup Priority = SDPG_World;
 	if (bPreviewForeground) Priority = SDPG_Foreground;
 
-	for (const auto &colMeta : VrmMetaObject->VRMColliderMeta) {
+	if (MetaObjectLocal->VRM1SpringBoneMeta.Springs.Num() > 0) {
+		// vrm1
+
+		// col
+		for (const auto& c : MetaObjectLocal->VRM1SpringBoneMeta.Colliders) {
+			const FTransform t = PreviewSkelMeshComp->GetSocketTransform(*c.boneName);
+
+			float r = (c.radius) * 100.f;
+			auto offs = c.offset;
+			offs.Set(offs.X, offs.Y, -offs.Z);
+			offs *= 100;
+			offs = t.TransformVector(offs);
+
+			if (c.shapeType == TEXT("sphere")) {
+
+				FTransform tt = t;
+				tt.AddToTranslation(offs);
+
+				DrawWireSphere(PDI, tt, FLinearColor(1,1,0), r, 32, Priority);
+			}
+			else {
+
+				auto tail = c.tail;
+				tail.Set(tail.X, tail.Y, -tail.Z);
+				tail *= 100;
+				tail = t.TransformVector(tail);
+
+				FTransform t1 = t;
+				t1.AddToTranslation(offs);
+
+				FTransform t2 = t;
+				t2.AddToTranslation(tail);
+
+				if (0) {
+					// sphere and line
+					DrawWireSphere(PDI, t1, FLinearColor(1, 1, 1), r, 32, Priority);
+					DrawWireSphere(PDI, t2, FLinearColor::Green, r, 32, Priority);
+					PDI->DrawLine(
+						t1.GetLocation(),
+						t2.GetLocation(),
+						FLinearColor::Green,
+						Priority);
+				}
+				else {
+					// capsule
+					FVector center = (t1.GetLocation() + t2.GetLocation()) / 2.f;
+					FVector Up = (t1.GetLocation() - t2.GetLocation()).GetSafeNormal();
+					FVector Forward, Right;
+
+					Up.FindBestAxisVectors(Forward, Right);
+					const FVector X = (Forward);
+					const FVector Y = (Right);
+					const FVector Z = (Up);
+					float halfheight = (t1.GetLocation() - center).Size() + r;
+					DrawWireCapsule(PDI, center, X, Y, Z, FLinearColor::Green, r, halfheight, 32, Priority);
+				}
+			}
+		}
+
+		// spring col
+
+		for (int springNo = 0; springNo < MetaObjectLocal->VRM1SpringBoneMeta.Springs.Num(); ++springNo) {
+			const auto& s = MetaObjectLocal->VRM1SpringBoneMeta.Springs[springNo];
+
+
+			const TArray<FLinearColor> color = {
+				FLinearColor(1.f, 0, 0),
+				FLinearColor(1.f, 0.5, 0),
+				FLinearColor(1.f, 0, 0.5),
+			};
+
+			for (int jointNo = 0; jointNo < s.joints.Num()-1; ++jointNo) {
+				auto& j1 = s.joints[jointNo];
+				auto& j2 = s.joints[jointNo + 1];
+
+				const FTransform t = PreviewSkelMeshComp->GetSocketTransform(*j2.boneName);
+
+				float r = j1.hitRadius * 100.f;
+
+				DrawWireSphere(PDI, t.GetLocation(), color[springNo%color.Num()], r, 32, Priority);
+
+				const FTransform t2 = PreviewSkelMeshComp->GetSocketTransform(*j1.boneName);
+
+				PDI->DrawLine(
+					t.GetLocation(),
+					t2.GetLocation(),
+					color[springNo % color.Num()] / 2.f,
+					Priority);
+			}
+		}
+	}
+
+	for (const auto &colMeta : MetaObjectLocal->VRMColliderMeta) {
 		const FTransform t = PreviewSkelMeshComp->GetSocketTransform(*colMeta.boneName);
 
 		for (const auto &col : colMeta.collider) {
 			float r = (col.radius) * 100.f;
-			//FVector v = collisionBoneTrans.TransformPosition(c.offset*100);
 			auto offs = col.offset;
 			offs.Set(-offs.X, offs.Z, offs.Y);
 			offs *= 100;
@@ -315,7 +368,7 @@ void FAnimNode_VrmSpringBone::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 			FTransform tt = t;
 			tt.AddToTranslation(offs);
 
-			DrawWireSphere(PDI, tt, FLinearColor::Green, r, 8, Priority);
+			DrawWireSphere(PDI, tt, FLinearColor::Green, r, 32, Priority);
 		}
 	}
 
@@ -332,7 +385,7 @@ void FAnimNode_VrmSpringBone::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 		TArray<SData> dataList;
 		TArray<int32> boneList;
 
-		for (const auto spr : VrmMetaObject->VRMSpringMeta) {
+		for (const auto spr : MetaObjectLocal->VRMSpringMeta) {
 			for (const auto boneName : spr.boneNames) {
 				int32_t boneIndex = PreviewSkelMeshComp->GetBoneIndex(*boneName);
 				boneList.AddUnique(boneIndex);
@@ -368,19 +421,8 @@ void FAnimNode_VrmSpringBone::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 			float r = dataList[i].radius * 100.f;
 			FVector v = t.GetLocation();
 
-			DrawWireSphere(PDI, t, FLinearColor::Red, r, 8, Priority);
+			DrawWireSphere(PDI, t, FLinearColor::Red, r, 32, Priority);
 		}
-		/*
-		for (int i = 0; i < boneList.Num(); ++i) {
-			const auto& name = PreviewSkelMeshComp->GetBoneName(boneList[i]);
-
-			FTransform t = PreviewSkelMeshComp->GetSocketTransform(name);
-			float r = spr.hitRadius * 100.f;
-			FVector v = t.GetLocation();
-
-			DrawDebugSphere(PreviewSkelMeshComp->GetWorld(), v, r, 8, FColor::Red, true, 0.1f);
-		}
-		*/
 	}
 
 
@@ -394,8 +436,8 @@ void FAnimNode_VrmSpringBone::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 		FTransform CachedEffectorCSTransform;
 
 		// Show end effector position.
-		DrawDebugBox(PreviewSkelMeshComp->GetWorld(), CSEffectorLocation, FVector(Precision), FColor::Green, true, 0.1f);
-		DrawDebugCoordinateSystem(PreviewSkelMeshComp->GetWorld(), CSEffectorLocation, CachedEffectorCSTransform.GetRotation().Rotator(), 5.f, true, 0.1f);
+		//DrawDebugBox(PreviewSkelMeshComp->GetWorld(), CSEffectorLocation, FVector(Precision), FColor::Green, true, 0.1f);
+		//DrawDebugCoordinateSystem(PreviewSkelMeshComp->GetWorld(), CSEffectorLocation, CachedEffectorCSTransform.GetRotation().Rotator(), 5.f, true, 0.1f);
 	}
 #endif
 }

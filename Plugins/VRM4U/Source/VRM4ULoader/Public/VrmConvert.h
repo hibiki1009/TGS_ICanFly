@@ -36,6 +36,7 @@ class UMaterialInterface;
 class USkeletalMesh;
 class UVrmAssetListObject;
 class UVrmLicenseObject;
+class UVrm1LicenseObject;
 class UPackage;
 
 
@@ -50,6 +51,8 @@ public:
 	int GetMatNum() const;
 	int GetMatCullMode(int matNo) const;
 	int GetMatZWrite(int matNo) const;
+
+	int GetThumbnailTextureIndex() const;
 
 	bool GetMatParam(VRM::VRMMaterial &m, int matNo) const;
 
@@ -67,10 +70,10 @@ public:
 	bool ConvertModel(UVrmAssetListObject *vrmAssetList);
 	bool ConvertMorphTarget(UVrmAssetListObject *vrmAssetList);
 
-	UVrmLicenseObject *GetVRMMeta(const aiScene *mScenePtr);
+	void GetVRMMeta(const aiScene *mScenePtr, UVrmLicenseObject *& a, UVrm1LicenseObject *& b);
 	bool ConvertVrmFirst(UVrmAssetListObject* vrmAssetList, const uint8* pData, size_t dataSize);
 	bool ConvertVrmMeta(UVrmAssetListObject *vrmAssetList, const aiScene *mScenePtr, const uint8* pData, size_t dataSize);
-	bool ConvertVrmMetaRenamed(UVrmAssetListObject* vrmAssetList, const aiScene* mScenePtr, const uint8* pData, size_t dataSize);
+	bool ConvertVrmMetaPost(UVrmAssetListObject* vrmAssetList, const aiScene* mScenePtr, const uint8* pData, size_t dataSize);
 
 	bool ConvertHumanoid(UVrmAssetListObject *vrmAssetList);
 	bool ConvertRig(UVrmAssetListObject *vrmAssetList);
@@ -142,6 +145,8 @@ public:
 
 		void ClearModelType();
 
+		bool IsUE5Material() const;
+
 		bool IsVRMModel() const;
 		bool IsVRM0Model() const;
 		bool IsVRM10Model() const;
@@ -194,12 +199,23 @@ extern FString VRM4U_GetPackagePath(UPackage* Outer);
 extern UPackage* VRM4U_CreatePackage(UPackage* Outer, FName Name);
 
 template< class T >
-T* VRM4U_NewObject(UPackage* Outer, FName Name, EObjectFlags Flags = RF_NoFlags, UObject* Template = nullptr, bool bCopyTransientsFromClassDefaults = false, FObjectInstancingGraph* InInstanceGraph = nullptr) {
-	UPackage* pkg = Outer;
+T* VRM4U_NewObject(UObject* Outer, FName Name, EObjectFlags Flags = RF_NoFlags, UObject* Template = nullptr, bool bCopyTransientsFromClassDefaults = false, FObjectInstancingGraph* InInstanceGraph = nullptr) {
+	UPackage* pkg = Cast<UPackage>(Outer);
 	if (VRMConverter::Options::Get().IsSingleUAssetFile() == false) {
-		pkg = VRM4U_CreatePackage(Outer, Name);
+		pkg = VRM4U_CreatePackage(pkg, Name);
 	}
 	decltype(auto) r = NewObject<T>(pkg, Name, Flags, Template, bCopyTransientsFromClassDefaults, InInstanceGraph);
+	r->MarkPackageDirty();
+	return r;
+}
+
+template< class T >
+T* VRM4U_NewObject(UObject* Outer, UClass* Class, FName Name, EObjectFlags Flags = RF_NoFlags, UObject* Template = nullptr, bool bCopyTransientsFromClassDefaults = false, FObjectInstancingGraph* InInstanceGraph = nullptr) {
+	UPackage* pkg = Cast<UPackage>(Outer);
+	if (VRMConverter::Options::Get().IsSingleUAssetFile() == false) {
+		pkg = VRM4U_CreatePackage(pkg, Name);
+	}
+	decltype(auto) r = NewObject<T>(pkg, Class, Name, Flags, Template, bCopyTransientsFromClassDefaults, InInstanceGraph);
 	r->MarkPackageDirty();
 	return r;
 }
@@ -214,7 +230,13 @@ T* VRM4U_DuplicateObject(const T *src, UPackage* Outer, FName Name) {
 	r->MarkPackageDirty();
 	return r;
 }
-//	ss = DuplicateObject<USkeletalMesh>(src_sk, p, *name_mesh)
+
+#if	UE_VERSION_OLDER_THAN(5,4,0)
+extern UObject* VRM4U_StaticDuplicateObject(UObject const* SourceObject, UObject* DestOuter, const FName DestName = NAME_None, EObjectFlags FlagMask = RF_AllFlags, UClass* DestClass = nullptr, EDuplicateMode::Type DuplicateMode = EDuplicateMode::Normal, EInternalObjectFlags InternalFlagsMask = EInternalObjectFlags::AllFlags);
+#else
+extern UObject* VRM4U_StaticDuplicateObject(UObject const* SourceObject, UObject* DestOuter, const FName DestName = NAME_None, EObjectFlags FlagMask = RF_AllFlags, UClass* DestClass = nullptr, EDuplicateMode::Type DuplicateMode = EDuplicateMode::Normal, EInternalObjectFlags InternalFlagsMask = EInternalObjectFlags_AllFlags);
+#endif
+
 
 #if	UE_VERSION_OLDER_THAN(5,0,0)
 template<typename T>
