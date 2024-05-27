@@ -13,7 +13,6 @@
 
 class USkeletalMeshComponent;
 class UVrmMetaObject;
-class UVrmAssetListObject;
 
 namespace VRMSpringBone {
 	class VRMSpringManagerBase;
@@ -28,19 +27,8 @@ struct VRM4U_API FAnimNode_VrmSpringBone : public FAnimNode_SkeletalControlBase
 {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Skeleton, meta = (PinHiddenByDefault))
-	bool EnableAutoSearchMetaData = true;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Skeleton, meta=(PinHiddenByDefault))
 	const UVrmMetaObject *VrmMetaObject = nullptr;
-
-#if	UE_VERSION_OLDER_THAN(5,0,0)
-	TAssetPtr<UVrmMetaObject> VrmMetaObject_Internal = nullptr;
-	TAssetPtr<UVrmAssetListObject> VrmAssetListObject_Internal = nullptr;
-#else
-	TSoftObjectPtr<UVrmMetaObject> VrmMetaObject_Internal = nullptr;
-	TSoftObjectPtr<UVrmAssetListObject> VrmAssetListObject_Internal = nullptr;
-#endif
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Skeleton, meta = (PinHiddenByDefault))
 	float gravityScale = 1.f;
@@ -70,7 +58,7 @@ struct VRM4U_API FAnimNode_VrmSpringBone : public FAnimNode_SkeletalControlBase
 	bool bIgnorePhysicsResetOnTeleport = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Skeleton, meta=(PinHiddenByDefault))
-	bool bIgnorePhysicsCollision = true;
+	bool bIgnorePhysicsCollision = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Skeleton, meta=(PinHiddenByDefault))
 	bool bIgnoreVRMCollision = false;

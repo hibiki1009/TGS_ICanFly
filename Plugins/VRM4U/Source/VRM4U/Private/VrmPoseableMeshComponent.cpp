@@ -14,15 +14,6 @@ UVrmPoseableMeshComponent::UVrmPoseableMeshComponent(const FObjectInitializer& O
 	bTickInEditor = true;
 }
 
-void UVrmPoseableMeshComponent::OnRegister() {
-	Super::OnRegister();
-	if (bUseDefaultMaterial) {
-		this->OverrideMaterials.Empty();
-	}
-	Init();
-}
-
-
 void UVrmPoseableMeshComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
@@ -39,7 +30,6 @@ void UVrmPoseableMeshComponent::TickComponent(float DeltaTime, enum ELevelTick T
 		MorphTargetWeights = MPCPtr->MorphTargetWeights;
 		ActiveMorphTargets = MPCPtr->ActiveMorphTargets;
 
-		/*
 		if (ActiveMorphTargets.Num() == 0){
 			auto* p = Cast<USkeletalMeshComponent>(MPCPtr);
 			if (p) {
@@ -53,7 +43,6 @@ void UVrmPoseableMeshComponent::TickComponent(float DeltaTime, enum ELevelTick T
 				}
 			}
 		}
-		*/
 	}
 #endif
 }

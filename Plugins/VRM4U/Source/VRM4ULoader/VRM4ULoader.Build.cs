@@ -73,7 +73,6 @@ public class VRM4ULoader : ModuleRules
 
 		if (Target.bBuildEditor == true)
 		{
-			PrivateDependencyModuleNames.Add("UnrealEd");
 			//PrivateDependencyModuleNames.Add("VRM4UImporter");
 			//PrivateIncludePaths.Add("VRM4UImporter/Private");
 

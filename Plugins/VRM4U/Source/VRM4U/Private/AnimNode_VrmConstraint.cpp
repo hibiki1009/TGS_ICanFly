@@ -8,7 +8,6 @@
 #include "DrawDebugHelpers.h"
 
 #include "VrmMetaObject.h"
-#include "VrmAssetListObject.h"
 #include "VrmUtil.h"
 
 #include <algorithm>
@@ -26,13 +25,6 @@ void FAnimNode_VrmConstraint::Initialize_AnyThread(const FAnimationInitializeCon
 	bCallInitialized = true;
 	Super::Initialize_AnyThread(Context);
 
-	VrmMetaObject_Internal = VrmMetaObject;
-	if (VrmMetaObject_Internal == nullptr && EnableAutoSearchMetaData) {
-		VrmAssetListObject_Internal = VRMUtil::GetAssetListObject(VRMGetSkinnedAsset(Context.AnimInstanceProxy->GetSkelMeshComponent()));
-		if (VrmAssetListObject_Internal) {
-			VrmMetaObject_Internal = VrmAssetListObject_Internal->VrmMetaObject;
-		}
-	}
 }
 void FAnimNode_VrmConstraint::CacheBones_AnyThread(const FAnimationCacheBonesContext& Context) {
 	Super::CacheBones_AnyThread(Context);
@@ -70,18 +62,13 @@ void FAnimNode_VrmConstraint::EvaluateSkeletalControl_AnyThread(FComponentSpaceP
 
 	UpdateCache(Output);
 
-	if (VrmMetaObject_Internal == nullptr) {
+	if (VrmMetaObject == nullptr) {
 		return;
 	}
 
-	for (auto& a : VrmMetaObject_Internal->VRMConstraintMeta) {
-
+	for (auto& a : VrmMetaObject->VRMConstraintMeta) {
 
 		int32 dstBoneIndex = Output.AnimInstanceProxy->GetSkeleton()->GetReferenceSkeleton().FindBoneIndex(*(a.Key));
-		if (Output.AnimInstanceProxy->GetSkeleton()->GetReferenceSkeleton().GetRefBonePose().IsValidIndex(dstBoneIndex) == false) {
-			continue;
-		}
-
 		FCompactPoseBoneIndex dstPoseBoneIndex(dstBoneIndex);
 		auto dstRefTrans = Output.AnimInstanceProxy->GetSkeleton()->GetReferenceSkeleton().GetRefBonePose()[dstBoneIndex];
 		auto dstRefRot = dstRefTrans.GetRotation();
@@ -158,13 +145,11 @@ void FAnimNode_VrmConstraint::EvaluateSkeletalControl_AnyThread(FComponentSpaceP
 			auto dstCurrentRot = dstCurrentTrans.GetRotation();
 
 			{
-				//auto r = (srcRefRot.Inverse() * srcCurrentRot);
-				auto r = srcCurrentRot;
-				//auto r = (srcCurrentRot);
+				auto r = (srcRefRot.Inverse() * srcCurrentRot);
 				FVector axis;
 				decltype(FVector::X) angle;
 				r.ToAxisAndAngle(axis, angle);
-				angle = FMath::UnwindRadians(angle);
+
 				FVector v;
 				if (roll.rollAxis.Find("X") >= 0) {
 					v.Set(1, 0, 0);
@@ -178,13 +163,11 @@ void FAnimNode_VrmConstraint::EvaluateSkeletalControl_AnyThread(FComponentSpaceP
 				if (roll.rollAxis.Find("negative") >= 0) {
 					v *= -1.f;
 				}
-				//v = srcCurrentTrans.TransformVector(v);
-				//v *= -1.f;
-
+				
 				auto d = FVector::DotProduct(axis, v);
 				r = FQuat(v, angle * roll.weight * d);
 
-				r = dstParentTrans.GetRotation() * r;
+				r = dstParentTrans.GetRotation() * dstRefRot * r;
 				dstCurrentTrans.SetRotation(r);
 				Output.Pose.SetComponentSpaceTransform(dstPoseBoneIndex, dstCurrentTrans);
 			}
@@ -251,72 +234,11 @@ void FAnimNode_VrmConstraint::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI,
 {
 #if WITH_EDITOR
 
-	auto MetaObjectLocal = VrmMetaObject_Internal;
-
-	if (MetaObjectLocal == nullptr && EnableAutoSearchMetaData) {
-		auto* p = VRMUtil::GetAssetListObject(VRMGetSkinnedAsset(PreviewSkelMeshComp));
-		if (p) {
-			MetaObjectLocal = p->VrmMetaObject;
-		}
-	}
-
-
-	if (MetaObjectLocal == nullptr || PreviewSkelMeshComp == nullptr) {
+	if (VrmMetaObject == nullptr || PreviewSkelMeshComp == nullptr) {
 		return;
 	}
 	if (PreviewSkelMeshComp->GetWorld() == nullptr) {
 		return;
 	}
-
-	ESceneDepthPriorityGroup Priority = SDPG_World;
-	if (bPreviewForeground) Priority = SDPG_Foreground;
-
-
-	const TArray<FLinearColor> color = {
-	FLinearColor(1.f, 0, 0),
-	FLinearColor(1.f, 0.5, 0),
-	FLinearColor(1.f, 0, 0.5),
-	};
-
-	for (const auto& c : MetaObjectLocal->VRMConstraintMeta) {
-		int colType = 0;
-		FString sourceName;
-		switch (c.Value.type) {
-		case EVRMConstraintType::Rotation:
-			sourceName = c.Value.constraintRotation.sourceName;
-			colType = 0;
-			break;
-		case EVRMConstraintType::Aim:
-			sourceName = c.Value.constraintAim.sourceName;
-			colType = 1;
-			break;
-		case EVRMConstraintType::Roll:
-			sourceName = c.Value.constraintRoll.sourceName;
-			colType = 2;
-			break;
-		}
-
-		FString targetName = c.Key;
-
-		const FTransform t1 = PreviewSkelMeshComp->GetSocketTransform(*sourceName);
-		const FTransform t2 = PreviewSkelMeshComp->GetSocketTransform(*targetName);
-
-		DrawWireSphere(PDI, t1, color[colType], 1, 32, Priority);
-
-		PDI->DrawLine(
-			t1.GetLocation(),
-			t2.GetLocation(),
-			color[colType] / 2.f,
-			Priority);
-	}
-
-
-//	PDI->DrawLine(
-	//	t.GetLocation(),
-	//	t2.GetLocation(),
-	//	color[springNo % color.Num()] / 2.f,
-	//	Priority);
-
-
 #endif
 }

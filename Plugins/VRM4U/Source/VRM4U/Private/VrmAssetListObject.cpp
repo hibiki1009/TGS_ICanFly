@@ -56,7 +56,6 @@ void UVrmAssetListObject::CopyMember(UVrmAssetListObject *dst) const {
 	dst->BaseSkeletalMesh = BaseSkeletalMesh;
 	dst->VrmMetaObject = VrmMetaObject;
 	dst->VrmLicenseObject = VrmLicenseObject;
-	dst->Vrm1LicenseObject = Vrm1LicenseObject;
 	dst->SkeletalMesh = SkeletalMesh;
 	dst->Textures = Textures;
 	dst->Materials = Materials;

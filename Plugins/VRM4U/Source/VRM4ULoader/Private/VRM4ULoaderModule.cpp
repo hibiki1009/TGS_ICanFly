@@ -1,6 +1,6 @@
 // VRM4U Copyright (c) 2021-2024 Haruyoshi Yamamoto. This software is released under the MIT License.
 
-#include "Engine/Engine.h"
+#include "Engine.h"
 #include "Modules/ModuleManager.h"
 #include "Modules/ModuleInterface.h"
 #include "VRM4ULoaderLog.h"
@@ -13,7 +13,6 @@
 
 #include "Windows/WindowsApplication.h"
 #include "GenericPlatform/GenericApplication.h"
-#include "Framework/Application/SlateApplication.h"
 #include "VrmDropFiles.h"
 #include "VrmRuntimeSettings.h"
 #include "Interfaces/IPluginManager.h"

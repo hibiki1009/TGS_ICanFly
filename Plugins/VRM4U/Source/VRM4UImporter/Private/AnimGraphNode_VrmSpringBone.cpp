@@ -78,22 +78,16 @@ UAnimGraphNode_VrmSpringBone::UAnimGraphNode_VrmSpringBone(const FObjectInitiali
 
 void UAnimGraphNode_VrmSpringBone::ValidateAnimNodePostCompile(FCompilerResultsLog& MessageLog, UAnimBlueprintGeneratedClass* CompiledClass, int32 CompiledNodeIndex) {
 
-	if (Node.VrmMetaObject_Internal == nullptr) {
+	if (Node.VrmMetaObject == nullptr) {
 		//MessageLog.Warning(*LOCTEXT("VrmNoMetaObject", "@@ - You must set VrmMetaObject").ToString(), this);
 	} else {
-		auto *targetSkeleton = CompiledClass->GetTargetSkeleton();
-		if (targetSkeleton) {
-			if (Node.VrmMetaObject_Internal->SkeletalMesh) {
-				if (VRMGetSkeleton(Node.VrmMetaObject_Internal->SkeletalMesh) != targetSkeleton) {
-					MessageLog.Warning(*LOCTEXT("VrmDifferentSkeleton", "@@ - You must set VrmMetaObject has same skeleton").ToString(), this);
-				}
-			}
-			if (targetSkeleton->GetReferenceSkeleton().GetRawBoneNum() <= 0) {
-				MessageLog.Warning(*LOCTEXT("VrmNoBone", "@@ - Skeleton bad data").ToString(), this);
+		if (Node.VrmMetaObject->SkeletalMesh) {
+			if (VRMGetSkeleton(Node.VrmMetaObject->SkeletalMesh) != CompiledClass->GetTargetSkeleton()) {
+				MessageLog.Warning(*LOCTEXT("VrmDifferentSkeleton", "@@ - You must set VrmMetaObject has same skeleton").ToString(), this);
 			}
 		}
-		else {
-			//MessageLog.Warning(*LOCTEXT("VrmNoBone", "@@ - no target skeleton").ToString(), this);
+		if (CompiledClass->GetTargetSkeleton()->GetReferenceSkeleton().GetRawBoneNum() <= 0) {
+			MessageLog.Warning(*LOCTEXT("VrmNoBone", "@@ - Skeleton bad data").ToString(), this);
 		}
 	}
 
@@ -105,11 +99,11 @@ void UAnimGraphNode_VrmSpringBone::ValidateAnimNodeDuringCompilation(USkeleton* 
 	// Temporary fix where skeleton is not fully loaded during AnimBP compilation and thus virtual bone name check is invalid UE-39499 (NEED FIX) 
 	if (ForSkeleton && !ForSkeleton->HasAnyFlags(RF_NeedPostLoad))
 	{
-		if (Node.VrmMetaObject_Internal == nullptr) {
+		if (Node.VrmMetaObject == nullptr) {
 			//MessageLog.Warning(*LOCTEXT("VrmNoMetaObject", "@@ - You must set VrmMetaObject").ToString(), this);
 		} else {
-			if (Node.VrmMetaObject_Internal->SkeletalMesh){
-				if (VRMGetSkeleton(Node.VrmMetaObject_Internal->SkeletalMesh) != ForSkeleton) {
+			if (Node.VrmMetaObject->SkeletalMesh){
+				if (VRMGetSkeleton(Node.VrmMetaObject->SkeletalMesh) != ForSkeleton) {
 			//		MessageLog.Warning(*LOCTEXT("VrmDifferentSkeleton", "@@ - You must set VrmMetaObject has same skeleton").ToString(), this);
 				}
 			}
@@ -208,16 +202,11 @@ void UAnimGraphNode_VrmSpringBone::Draw(FPrimitiveDrawInterface* PDI, USkeletalM
 {
 	if (PreviewSkelMeshComp)
 	{
-		/*
 		if (FAnimNode_VrmSpringBone* ActiveNode = GetActiveInstanceNode<FAnimNode_VrmSpringBone>(PreviewSkelMeshComp->GetAnimInstance()))
 		{
 			if (bPreviewLive) {
 				ActiveNode->ConditionalDebugDraw(PDI, PreviewSkelMeshComp, bPreviewForeground);
 			}
-		}
-		*/
-		if (bPreviewLive) {
-			Node.ConditionalDebugDraw(PDI, PreviewSkelMeshComp, bPreviewForeground);
 		}
 	}
 }

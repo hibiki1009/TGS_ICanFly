@@ -15,8 +15,20 @@ public class VRM4UMisc : ModuleRules
                 "EditorStyle",
                 "ApplicationCore",
                 "Engine",
+				"Json",
 				"UnrealEd",
+                "Slate",
+                "SlateCore",
+                "MainFrame",
                 "VRM4U",
+                //"VRM4ULoader",
+                "Settings",
+                "RenderCore",
+
+                "MovieSceneCapture",
+                "RHI",
+                //"ShaderCore",
+                "Renderer",
             });
 
 		PrivateIncludePathModuleNames.AddRange(
@@ -33,6 +45,7 @@ public class VRM4UMisc : ModuleRules
 
         PrivateIncludePaths.AddRange(
         new string[] {
+			// Relative to Engine\Plugins\Runtime\Oculus\OculusVR\Source
 			//"../Runtime/Renderer/Private",
         });
     }

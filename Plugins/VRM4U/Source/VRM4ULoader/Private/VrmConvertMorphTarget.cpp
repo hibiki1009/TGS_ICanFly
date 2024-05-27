@@ -187,36 +187,24 @@ static bool readMorph2(TArray<FMorphTargetDelta> &MorphDeltas, aiString targetNa
 						aiA.mVertices[i][2] * 100.f,
 						aiA.mVertices[i][1] * 100.f
 					);
-
-					if (VRMConverter::Options::Get().IsVRM10Model()) {
-						v.PositionDelta.Set(
-							aiA.mVertices[i][0] * 100.f,
-							-aiA.mVertices[i][2] * 100.f,
-							aiA.mVertices[i][1] * 100.f
-						);
-					}
 				}
 
 				v.PositionDelta *= VRMConverter::Options::Get().GetModelScale();
 
+				if (VRMConverter::Options::Get().IsVRM10Model()) {
+					v.PositionDelta.X *= -1.f;
+					v.PositionDelta.Y *= -1.f;
+				}
 
 				if (bIncludeNormal) {
 #if	UE_VERSION_OLDER_THAN(5,0,0)
-					FVector n(
+					const FVector n(
 #else
-					FVector3f n(
+					const FVector3f n(
 #endif
 						-aiA.mNormals[i][0],
 						aiA.mNormals[i][2],
 						aiA.mNormals[i][1]);
-
-					if (VRMConverter::Options::Get().IsVRM10Model()) {
-						n.Set(
-							aiA.mNormals[i][0],
-							-aiA.mNormals[i][2],
-							aiA.mNormals[i][1]);
-					}
-
 					if (n.Size() > 1.f) {
 						v.TangentZDelta = n.GetUnsafeNormal();
 					}

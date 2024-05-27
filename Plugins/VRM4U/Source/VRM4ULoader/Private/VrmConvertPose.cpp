@@ -705,9 +705,7 @@ namespace {
 
 				ase->SetPreviewMesh(sk);
 
-#if	UE_VERSION_OLDER_THAN(5,3,0)
 				DataController.UpdateCurveNamesFromSkeleton(k, ERawCurveTrackTypes::RCT_Float);
-#endif
 				DataController.NotifyPopulated();
 			}
 #endif
@@ -1123,14 +1121,12 @@ bool VRMConverter::ConvertPose(UVrmAssetListObject *vrmAssetList) {
 								dstTrans[ik_r] = dstTrans[kr];
 								dstTrans[ik_l] = dstTrans[kl];
 
-#if	UE_VERSION_OLDER_THAN(5,3,0)
 								// local
 								if (VRMGetRetargetBasePose(sk).Num()) {
 									VRMGetRetargetBasePose(sk)[ik_g] = dstTrans[kr];
 									VRMGetRetargetBasePose(sk)[ik_r].SetIdentity();
 									VRMGetRetargetBasePose(sk)[ik_l] = dstTrans[kl] * dstTrans[kr].Inverse();
 								}
-#endif
 							}
 						}
 					}
@@ -1151,13 +1147,11 @@ bool VRMConverter::ConvertPose(UVrmAssetListObject *vrmAssetList) {
 								dstTrans[ik_r] = dstTrans[kr];
 								dstTrans[ik_l] = dstTrans[kl];
 
-#if	UE_VERSION_OLDER_THAN(5,3,0)
 								// local
 								if (VRMGetRetargetBasePose(sk).Num()) {
 									VRMGetRetargetBasePose(sk)[ik_r] = dstTrans[kr];
 									VRMGetRetargetBasePose(sk)[ik_l] = dstTrans[kl];
 								}
-#endif
 							}
 						}
 					}

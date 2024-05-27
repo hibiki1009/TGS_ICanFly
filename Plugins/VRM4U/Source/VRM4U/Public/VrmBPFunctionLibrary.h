@@ -237,10 +237,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "VRM4U", meta = (DynamicOutputParam = "AssetName"))
 	static void VRMGetTopLevelAssetName(const FAssetData& target, FName& AssetName);
-
-	UFUNCTION(BlueprintPure, Category = "VRM4U")
-	static UVrmAssetListObject* VRMGetVrmAssetListObjectFromAsset(const UObject *Asset);
-
+	
 };
 
 

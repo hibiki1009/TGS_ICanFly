@@ -44,7 +44,7 @@ private:
 
 
 
-UCLASS(meta=(Keywords = "VRM4U"))
+UCLASS(meta=(Keywords = "Modify Transform"))
 class UAnimGraphNode_VrmSpringBone : public UAnimGraphNode_SkeletalControlBase
 {
 	GENERATED_UCLASS_BODY()

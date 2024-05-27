@@ -322,8 +322,31 @@ void UVrmAnimInstance::NativeUpdateAnimation(float DeltaSeconds) {
 
 		a->CurrentSkeleton = VRMGetSkeleton( VRMGetSkinnedAsset(BaseSkeletalMeshComponent) );
 	}
+
+//	USkeletalMesh *m;
+
+	auto targetComponent = Cast<USkeletalMeshComponent>(this);
+
+	//BaseSkeletalMeshComponent->GetSocketTransform();
+	//const auto boneTree = BaseSkeletalMeshComponent->SkeletalMesh->Skeleton->GetBoneTree();
+
+	if (targetComponent) {
+		//for (auto &a : targetComponent->BoneSpaceTransforms) {
+		//	a.SetIdentity();
+		//}
+	}
+
+	//for (auto &b : boneTree) {
+	//}
 }
 void UVrmAnimInstance::NativePostEvaluateAnimation() {
+	auto targetComponent = Cast<USkeletalMeshComponent>(this);
+	if (targetComponent) {
+		//for (auto &a : targetComponent->BoneSpaceTransforms) {
+			//a.SetIdentity();
+		//}
+	}
+
 	if (BaseSkeletalMeshComponent) {
 		if (BaseSkeletalMeshComponent->AnimScriptInstance) {
 			IAnimClassInterface* AnimClassInterface = IAnimClassInterface::GetFromClass(this->GetClass());

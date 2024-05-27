@@ -18,19 +18,13 @@ class FCompilerResultsLog;
 class FPrimitiveDrawInterface;
 class USkeletalMeshComponent;
 
-UCLASS(meta=(Keywords = "VRM4U"))
+UCLASS(meta=(Keywords = "Modify Transform"))
 class UAnimGraphNode_VrmConstraint : public UAnimGraphNode_SkeletalControlBase
 {
 	GENERATED_UCLASS_BODY()
 
 	UPROPERTY(EditAnywhere, Category=Settings)
 	FAnimNode_VrmConstraint Node;
-
-	UPROPERTY(EditAnywhere, Category = Preview)
-	bool bPreviewLive = true;
-
-	UPROPERTY(EditAnywhere, Category = Preview)
-	bool bPreviewForeground = true;
 
 public:
 	// UEdGraphNode interface

@@ -121,11 +121,6 @@ static void renameToUE4Bone(USkeletalMesh *targetSK, UVrmMetaObject *meta, const
 
 	TMap<FName, FName> changeTable;
 
-	allbone[0].Name = TEXT("root");
-#if WITH_EDITORONLY_DATA
-	allbone[0].ExportName = TEXT("root");
-#endif
-
 	for (auto &a : allbone) {
 
 		FString toVRMBone;
@@ -245,15 +240,11 @@ bool VRMConverter::ConvertHumanoid(UVrmAssetListObject *vrmAssetList) {
 			if (i == 0) {
 				ss = VRM4U_DuplicateObject<USkeletalMesh>(src_sk, p, *name_mesh);
 				base = VRM4U_DuplicateObject<USkeleton>(src_k, p, *name_skeleton);
-				if (src_rig) {
-					rr = VRM4U_NewObject<UNodeMappingContainer>(p, *name_rig, RF_Public | RF_Standalone);
-				}
+				rr = VRM4U_NewObject<UNodeMappingContainer>(p, *name_rig, RF_Public | RF_Standalone);
 			}else {
 				ss = VRM4U_DuplicateObject<USkeletalMesh>(src_sk, p, *name_mesh);
 				base = VRM4U_DuplicateObject<USkeleton>(src_k, p, *name_skeleton);
-				if (src_rig) {
-					rr = VRM4U_NewObject<UNodeMappingContainer>(p, *name_rig, RF_Public | RF_Standalone);
-				}
+				rr = VRM4U_NewObject<UNodeMappingContainer>(p, *name_rig, RF_Public | RF_Standalone);
 			}
 		}
 #else

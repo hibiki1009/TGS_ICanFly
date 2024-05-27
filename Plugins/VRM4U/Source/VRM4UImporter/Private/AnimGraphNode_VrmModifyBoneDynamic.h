@@ -12,7 +12,7 @@
 
 class FCompilerResultsLog;
 
-UCLASS(meta=(Keywords = "VRM4U"))
+UCLASS(meta=(Keywords = "Modify Transform"))
 class UAnimGraphNode_VrmModifyBoneDynamic : public UAnimGraphNode_SkeletalControlBase
 {
 	GENERATED_UCLASS_BODY()

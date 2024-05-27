@@ -24,10 +24,11 @@
 
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/PhysicsConstraintTemplate.h"
+
 #include "Internationalization/Internationalization.h"
 
 #include "Animation/AnimSequence.h"
-#include "Animation/AnimBlueprint.h"
+
 #include "Async/ParallelFor.h"
 
 #include <assimp/Importer.hpp>
@@ -36,11 +37,6 @@
 #include <assimp/postprocess.h>
 #include <assimp/GltfMaterial.h>
 #include <assimp/vrm/vrmmeta.h>
-
-#if WITH_EDITOR
-#include "Kismet2/KismetEditorUtilities.h"
-#endif
-
 
 #define LOCTEXT_NAMESPACE "VRM4U"
 
@@ -1029,8 +1025,7 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 
 						for (int vertexNo = 0; vertexNo < info[meshNo].Vertices.Num(); ++vertexNo) {
 							FVector v_orig = info[meshNo].Vertices[vertexNo];
-							//v_orig.Set(mesh->mVertices[vertexNo].x, mesh->mVertices[vertexNo].y, mesh->mVertices[vertexNo].z);
-							v_orig.Set(mesh->mVertices[vertexNo].x, -mesh->mVertices[vertexNo].z, mesh->mVertices[vertexNo].y);
+							v_orig.Set(mesh->mVertices[vertexNo].x, mesh->mVertices[vertexNo].y, mesh->mVertices[vertexNo].z);
 							FVector v(0, 0, 0);
 
 							if (weightTable.Find(vertexOffset + vertexNo) == nullptr) {
@@ -1057,7 +1052,6 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 									UE_LOG(LogVRM4ULoader, Warning, TEXT("BindPose -> TPose :: no pose transform %p %p"), tpose, bpose);
 								}
 							}
-							v.Set(v.X, v.Z, -v.Y);
 							info[meshNo].Vertices[vertexNo] = v / 100.f;
 						}
 						vertexOffset += mesh->mNumVertices;
@@ -1212,7 +1206,7 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 
 					v.PositionVertexBuffer.VertexPosition(currentVertex + i).Set(-a.X, a.Z, a.Y);
 					if (VRMConverter::Options::Get().IsVRM10Model()) {
-						v.PositionVertexBuffer.VertexPosition(currentVertex + i).Set(a.X, -a.Z, a.Y);
+						v.PositionVertexBuffer.VertexPosition(currentVertex + i).Set(a.X, a.Y, a.Z);
 					}else if (VRMConverter::Options::Get().IsPMXModel() || VRMConverter::Options::Get().IsBVHModel()) {
 						v.PositionVertexBuffer.VertexPosition(currentVertex + i).X *= -1.f;
 						v.PositionVertexBuffer.VertexPosition(currentVertex + i).Y *= -1.f;
@@ -1240,11 +1234,7 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 						FVector n_tmp(-n.X, n.Z, n.Y);
 						FVector t_tmp(-mInfo.Tangents[i].X, mInfo.Tangents[i].Z, mInfo.Tangents[i].Y);
 
-						if (VRMConverter::Options::Get().IsVRM10Model()) {
-							n_tmp.Set(n.X, -n.Z, n.Y);
-							t_tmp.Set(mInfo.Tangents[i].X, -mInfo.Tangents[i].Z, mInfo.Tangents[i].Y);
-						}
-						if (VRMConverter::Options::Get().IsPMXModel() || VRMConverter::Options::Get().IsBVHModel()) {
+						if (VRMConverter::Options::Get().IsVRM10Model() || VRMConverter::Options::Get().IsPMXModel() || VRMConverter::Options::Get().IsBVHModel()) {
 							FVector tmpv(-1, -1, 1);
 							n_tmp *= tmpv;
 							t_tmp *= tmpv;
@@ -1836,20 +1826,13 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 				ENQUEUE_RENDER_COMMAND(UpdateCommand)(
 					[sk, Triangles, Weight](FRHICommandListImmediate& RHICmdList)
 				{
-
-#if	UE_VERSION_OLDER_THAN(5,3,0)
-#define VRM4U_RHI_CMD_LIST
-#else
-#define VRM4U_RHI_CMD_LIST RHICmdList
-#endif
-
 					FSkeletalMeshLODRenderData &d = sk->GetResourceForRendering()->LODRenderData[0];
 
 					if (d.MultiSizeIndexContainer.IsIndexBufferValid()) {
 						d.MultiSizeIndexContainer.GetIndexBuffer()->ReleaseResource();
 					}
 					d.MultiSizeIndexContainer.RebuildIndexBuffer(sizeof(uint32), Triangles);
-					d.MultiSizeIndexContainer.GetIndexBuffer()->InitResource(VRM4U_RHI_CMD_LIST);
+					d.MultiSizeIndexContainer.GetIndexBuffer()->InitResource();
 
 					//d.AdjacencyMultiSizeIndexContainer.CopyIndexBuffer(Triangles);
 #if	UE_VERSION_OLDER_THAN(5,0,0)
@@ -1902,10 +1885,10 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 #else
 #endif
 
-					d.StaticVertexBuffers.PositionVertexBuffer.UpdateRHI(VRM4U_RHI_CMD_LIST);
-					d.StaticVertexBuffers.StaticMeshVertexBuffer.UpdateRHI(VRM4U_RHI_CMD_LIST);
+					d.StaticVertexBuffers.PositionVertexBuffer.UpdateRHI();
+					d.StaticVertexBuffers.StaticMeshVertexBuffer.UpdateRHI();
 
-					d.MultiSizeIndexContainer.GetIndexBuffer()->UpdateRHI(VRM4U_RHI_CMD_LIST);
+					d.MultiSizeIndexContainer.GetIndexBuffer()->UpdateRHI();
 #if	UE_VERSION_OLDER_THAN(5,0,0)
 					d.AdjacencyMultiSizeIndexContainer.GetIndexBuffer()->UpdateRHI();
 #endif
@@ -2182,6 +2165,7 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 #endif
 		Controller.ResetModel();
 
+
 		double AnimDeltaTime = 0.f;
 		{
 			for (uint32_t animNo = 0; animNo < aiData->mNumAnimations; animNo++) {
@@ -2215,10 +2199,7 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 		}
 		Controller.SetNumberOfFrames(FrameNum - 1);
 #endif
-
-#if	UE_VERSION_OLDER_THAN(5,3,0)
 		Controller.UpdateCurveNamesFromSkeleton(k, ERawCurveTrackTypes::RCT_Float);
-#endif
 
 		//Controller.OpenBracket(LOCTEXT("VRM4U", "Importing BVH"), false);
 
@@ -2235,36 +2216,11 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 
 			for (uint32_t animNo = 0; animNo < aiData->mNumAnimations; animNo++) {
 				aiAnimation* aiA = aiData->mAnimations[animNo];
-
+				
 				for (uint32_t chanNo = 0; chanNo < aiA->mNumChannels; chanNo++) {
 					aiNodeAnim* aiNA = aiA->mChannels[chanNo];
 
 					FRawAnimSequenceTrack RawTrack;
-
-					bool isRootBone = false;
-					FName NodeName = UTF8_TO_TCHAR(aiNA->mNodeName.C_Str());
-					if (VRMConverter::Options::Get().IsVRMAModel()) {
-						if (vrmAssetList->VrmMetaObject) {
-							for (auto& t : vrmAssetList->VrmMetaObject->humanoidBoneTable) {
-
-								if (t.Value == NodeName.ToString()) {
-									NodeName = *t.Key;
-									break;
-								}
-							}
-						}
-					}
-					{
-						auto ind = k->GetReferenceSkeleton().FindBoneIndex(NodeName);
-						if (ind != INDEX_NONE) {
-							ind = k->GetReferenceSkeleton().GetParentIndex(ind);
-							if (ind == INDEX_NONE) {
-								// root bone. no parent.
-
-								isRootBone = true;
-							}
-						}
-					}
 
 					{
 						for (uint32_t i = 0; i < aiNA->mNumPositionKeys; ++i) {
@@ -2276,23 +2232,10 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 							}
 							FVector pos(-v.x, v.z, v.y);
 							pos *= Scale * VRMConverter::Options::Get().GetAnimationTranslateScale();
-							if (VRMConverter::Options::Get().IsVRM10Model()) {
-								pos.Set(v.x, -v.z, v.y);
-								pos *= Scale * VRMConverter::Options::Get().GetAnimationTranslateScale();
+							if (VRMConverter::Options::Get().IsVRM10Model() || VRMConverter::Options::Get().IsPMXModel() || VRMConverter::Options::Get().IsBVHModel()) {
+								pos.X *= -1.f;
+								pos.Y *= -1.f;
 							}
-							if (VRMConverter::Options::Get().IsPMXModel() || VRMConverter::Options::Get().IsBVHModel()) {
-									//pos.X *= -1.f;
-								//pos.Y *= -1.f;
-							}
-							//if (VRMConverter::Options::Get().IsVRMAModel() ) {
-							//	if (isRootBone) {
-							//		pos.X *= -1.f;
-							//		pos.Y *= -1.f;
-							//	}else {
-							//		pos.Set(v.x, v.y, v.z);
-							//		pos *= Scale * VRMConverter::Options::Get().GetAnimationTranslateScale();
-							//	}
-							//}
 #if UE_VERSION_OLDER_THAN(5,0,0)
 							RawTrack.PosKeys.Add(pos);
 #else
@@ -2328,10 +2271,9 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 								}
 #else
 								q = FQuat4f(-v.x, v.y, v.z, -v.w);
-
-								if (VRMConverter::Options::Get().IsVRM10Model()) {
-
-									q = FQuat4f(v.x, -v.z, v.y, v.w);
+								{
+									auto d = FQuat4f(FVector3f(1, 0, 0), -PI / 2.f);
+									q = d * q * d.Inverse();
 								}
 #endif
 
@@ -2393,36 +2335,17 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 						}
 #else
 						{
+							FName NodeName = UTF8_TO_TCHAR(aiNA->mNodeName.C_Str());
+							
 							if (VRMConverter::Options::Get().IsVRMAModel()) {
-								auto &presetList = vrmAssetList->VrmMetaObject->VRMAnimationMeta.expressionPreset;
-								for (auto& p : presetList) {
-									if (NodeName != *p.expressionNodeName) continue;
+								if (vrmAssetList->VrmMetaObject) {
+									for (auto& t : vrmAssetList->VrmMetaObject->humanoidBoneTable) {
 
-									FFloatCurve c;
-									c.SetCurveTypeFlag(AACF_Editable, true);
-
-
-									auto boneNo = k->GetReferenceSkeleton().FindBoneIndex(*p.expressionNodeName);
-									if (boneNo != INDEX_NONE) {
-
-										for (int i = 0; i < RawTrack.PosKeys.Num(); ++i) {
-											c.UpdateOrAddKey(RawTrack.PosKeys[i].X / 100.f, i * AnimDeltaTime);
+										if (t.Value == NodeName.ToString()) {
+											NodeName = *t.Key;
+											break;
 										}
 									}
-#if	UE_VERSION_OLDER_THAN(5,3,0)
-									FSmartName sm;
-									{
-										TArray<FName> a = {*p.expressionName };
-										k->RemoveSmartnamesAndModify(USkeleton::AnimCurveMappingName, a);
-									}
-									k->AddSmartNameAndModify(USkeleton::AnimCurveMappingName, *p.expressionName, sm);
-									FAnimationCurveIdentifier f(sm, ERawCurveTrackTypes::RCT_Float);
-#else
-									FAnimationCurveIdentifier f(*p.expressionName, ERawCurveTrackTypes::RCT_Float);
-#endif
-									FName name;
-									Controller.AddCurve(f);
-									Controller.SetCurveKeys(f, c.FloatCurve.GetConstRefOfKeys());
 								}
 							}
 
@@ -2473,31 +2396,6 @@ bool VRMConverter::ConvertModel(UVrmAssetListObject *vrmAssetList) {
 		ase->PostEditChange();
 	}
 
-	{
-		FSoftObjectPath r(TEXT("/VRM4U/Util/Actor/latest/ABP_PostProcessBase.ABP_PostProcessBase"));
-		UObject* u = r.TryLoad();
-
-		if (u) {
-			FString name = FString(TEXT("ABP_Post_")) + vrmAssetList->BaseFileName;
-
-			auto b = Cast<UAnimBlueprint>(VRM4U_StaticDuplicateObject(u, vrmAssetList->Package, *name, EObjectFlags::RF_Public | EObjectFlags::RF_Standalone));
-			if (b) {
-				b->MarkPackageDirty();
-				b->TargetSkeleton = k;
-				b->SetPreviewMesh(sk);
-#if WITH_EDITOR
-				FKismetEditorUtilities::CompileBlueprint(b);
-#endif
-				UBlueprintGeneratedClass* bpClass = Cast<UBlueprintGeneratedClass>(b->GeneratedClass);
-#if	UE_VERSION_OLDER_THAN(4,27,0)
-				sk->PostProcessAnimBlueprint = bpClass;
-#else
-				sk->SetPostProcessAnimBlueprint(bpClass);
-#endif
-				sk->PostEditChange();
-			}
-		}
-	}
 #endif
 
 	return true;

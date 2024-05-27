@@ -9,22 +9,13 @@
 /**
  * 
  */
-UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
+UCLASS(meta=(BlueprintSpawnableComponent))
 class VRM4U_API UVrmPoseableMeshComponent : public UPoseableMeshComponent
 {
 	GENERATED_UCLASS_BODY()
 	
 	
 public:
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VRM4U")
-	bool bUseDefaultMaterial = false;
-
-
-	void OnRegister() override;
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "VRM4U")
-	void Init();
 
 	virtual void RefreshBoneTransforms(FActorComponentTickFunction* TickFunction = NULL) override;
 

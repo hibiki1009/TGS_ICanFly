@@ -389,7 +389,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRM4U")
 	bool bForceTwoSided = false;
 
-	bool bSingleUAssetFile = false;
+	bool bSingleUAssetFile = true;
 
 	bool bDefaultGridTextureMode = false;
 
@@ -398,9 +398,6 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRM4U")
 	bool bMipmapGenerateMode = false;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRM4U")
-	bool bUseUE5Material = false;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "VRM4U")
 	bool bGenerateOutlineMaterial = true;
@@ -510,8 +507,6 @@ public:
 	static FString MakeName(const FString& str, bool IsJoint = false);
 
 	static int32 GetDirectChildBones(FReferenceSkeleton& refs, int32 ParentBoneIndex, TArray<int32>& Children);
-
-	static class UVrmAssetListObject* GetAssetListObject(const UObject*);
 };
 
 class VRM4U_API VRMRetargetData {

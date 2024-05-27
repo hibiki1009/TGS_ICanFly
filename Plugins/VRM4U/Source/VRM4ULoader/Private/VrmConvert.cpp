@@ -419,7 +419,7 @@ bool VRMConverter::Options::IsForceTwoSided() const {
 }
 
 bool VRMConverter::Options::IsSingleUAssetFile() const {
-	if (ImportOption == nullptr) return false;
+	if (ImportOption == nullptr) return true;
 
 	if (ImportOption->bUEFN) return false;
 
@@ -480,11 +480,6 @@ bool VRMConverter::Options::IsOptimizeVertex() const {
 bool VRMConverter::Options::IsRemoveDegenerateTriangles() const {
 	if (ImportOption == nullptr) return true;
 	return ImportOption->bRemoveDegenerateTriangles;
-}
-
-bool VRMConverter::Options::IsUE5Material() const {
-	if (ImportOption == nullptr) return false;
-	return ImportOption->bUseUE5Material;
 }
 
 static bool bbVRM0 = false;
@@ -634,7 +629,6 @@ VrmConvert::~VrmConvert()
 }
 
 FString VRM4U_GetPackagePath(UPackage* Outer) {
-	if (Outer == nullptr) return "";
 	if (Outer != GetTransientPackage()) {
 		FString s = Outer->GetPathName();
 		FString s1, s2;
@@ -647,7 +641,6 @@ FString VRM4U_GetPackagePath(UPackage* Outer) {
 
 
 UPackage* VRM4U_CreatePackage(UPackage* Outer, FName Name) {
-	if (Outer == nullptr) return nullptr;
 	UPackage* pkg = Outer;
 	if (Outer != GetTransientPackage()) {
 		FString s = Outer->GetPathName();
@@ -664,17 +657,6 @@ UPackage* VRM4U_CreatePackage(UPackage* Outer, FName Name) {
 }
 
 
-UObject* VRM4U_StaticDuplicateObject(UObject const* SourceObject, UObject* DestOuter, const FName DestName, EObjectFlags FlagMask, UClass* DestClass, EDuplicateMode::Type DuplicateMode, EInternalObjectFlags InternalFlagsMask) {
-
-	if (VRMConverter::Options::Get().IsSingleUAssetFile() == false) {
-		DestOuter = VRM4U_CreatePackage(Cast<UPackage>(DestOuter), DestName);
-	}
-
-	return StaticDuplicateObject(SourceObject,
-		DestOuter, DestName,
-		FlagMask, DestClass, DuplicateMode, InternalFlagsMask);
-}
-
 
 
 
@@ -690,23 +672,6 @@ static void copyVector(VRM::vec4 &v, const T1& t) {
 	} else {
 		v[3] = 1.f;
 	}
-}
-
-int VRMConverter::GetThumbnailTextureIndex() const {
-
-	if (VRMConverter::Options::Get().IsVRM0Model()) {
-		return -1;
-	}
-	auto& meta = jsonData.doc["extensions"]["VRMC_vrm"]["meta"];
-	for (auto m = meta.MemberBegin(); m != meta.MemberEnd(); ++m) {
-
-		FString key = UTF8_TO_TCHAR((*m).name.GetString());
-
-		if (key == "thumbnailImage") {
-			return (*m).value.GetInt();
-		}
-	}
-	return -1;
 }
 
 bool VRMConverter::GetMatParam(VRM::VRMMaterial &m, int matNo) const {
