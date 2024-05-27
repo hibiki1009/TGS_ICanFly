@@ -58,10 +58,6 @@ bool VrmJson::init(const uint8_t* pData, size_t size) {
 	return true;
 }
 
-
-void VrmJsonTest(const uint8_t* pData, size_t size) {
-}
-
 bool VRMIsVRM10(const uint8_t* pData, size_t size) {
 
 	if (size < 4 || pData == nullptr) {
@@ -113,6 +109,9 @@ bool VRMIsVRM10(const uint8_t* pData, size_t size) {
 
 	if (doc.HasMember("extensions")) {
 		if (doc["extensions"].HasMember("VRMC_vrm")) {
+			return true;
+		}
+		if (doc["extensions"].HasMember("VRMC_vrm_animation")) {
 			return true;
 		}
 	}
