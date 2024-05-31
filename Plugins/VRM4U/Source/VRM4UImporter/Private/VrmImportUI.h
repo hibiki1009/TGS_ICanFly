@@ -7,6 +7,7 @@
 #include "UObject/Object.h"
 #include "Factories/ImportSettings.h"
 #include "VrmConvert.h"
+#include "Vrm1LicenseObject.h"
 
 #include "VrmImportUI.generated.h"
 
@@ -38,6 +39,9 @@ public:
 	/** Materal Type */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
 	EVRMImportMaterialType MaterialType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category = Mesh, meta = (ImportType = "StaticMesh|SkeletalMesh", DisplayName = "Use UE5 Material"))
+	bool bUseUE5Material = false;
 
 	/** Outline Material*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category = Mesh, meta = (ImportType = "StaticMesh|SkeletalMesh", DisplayName = "GenerateOutlineMaterial"))
@@ -117,7 +121,7 @@ public:
 
 	/** Save as single uasset file */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category = Mesh, meta = (ImportType = "StaticMesh|SkeletalMesh", DisplayName = "Single uasset file"))
-	bool bSingleUAssetFile = true;
+	bool bSingleUAssetFile = false;
 
 	/** Use GridTexture by Default */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category = Mesh, meta = (ImportType = "StaticMesh|SkeletalMesh", DisplayName = "[Texture] Use DummyGrid by DefaultBaseTexture"))
@@ -173,6 +177,16 @@ public:
 	/** Skeleton to use for imported asset. When importing a mesh, leaving this as "None" will create a new skeleton. When importing an animation this MUST be specified to import the asset. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay, Category=Mesh, meta=(ImportType="SkeletalMesh"))
 	class USkeleton* Skeleton;
+
+	//
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VRM1_License")
+	TArray<FLicenseBoolDataPair> LicenseBool;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VRM1_License")
+	TArray<FLicenseStringDataPair> LicenseString;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VRM1_License")
+	TArray<FLicenseStringDataArray> LicenseStringArray;
 
 	//
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "License_Personation/CharacterizationPermission")
